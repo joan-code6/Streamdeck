@@ -1,0 +1,204 @@
+import asyncio
+import json
+import sys
+from bleak import BleakScanner, BleakClient
+import time
+import signal
+import logging
+import uuid
+import os
+
+# Configure logging
+logging.basicConfig(level=logging.WARNING)
+
+# Global variables for device management
+connected_devices = {}
+device_timeouts = {}
+client_uuid = str(uuid.uuid4())  # Generate unique client UUID
+
+# Service and characteristic UUIDs (must match ESP32)
+SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+class DeviceManager:
+    def __init__(self):
+        self.devices = {}
+        self.clients = {}
+        self.client_uuid = client_uuid
+        print(json.dumps({"debug": f"Client UUID: {self.client_uuid}"}))
+        
+    async def notification_handler(self, sender, data):
+        """Handle incoming BLE notifications"""
+        try:
+            message = data.decode('utf-8')
+            data_obj = json.loads(message)
+            
+            # Get device address from the sender characteristic
+            device_address = None
+            for addr, client in self.clients.items():
+                if client.is_connected:
+                    device_address = addr
+                    break
+            
+            if device_address:
+                # Update device timeout
+                device_timeouts[device_address] = time.time()
+                
+                # Handle pairing confirmation
+                if data_obj.get('action') == 'pair_confirm':
+                    print(json.dumps({
+                        "debug": f"Pairing confirmed with {device_address}",
+                        "device_uuid": data_obj.get('device_uuid'),
+                        "status": data_obj.get('status')
+                    }))
+                    return
+                
+                # Process GPIO data
+                if 'gpio_states' in data_obj:
+                    # Create device info in expected format
+                    device_info = {
+                        "address": device_address,
+                        "name": f"ESP32-{device_address[-5:]}",
+                        "gpio_states": data_obj.get('gpio_states', []),
+                        "timestamp": time.time(),
+                        "connected": True
+                    }
+                    
+                    # Output the device update
+                    print(json.dumps(device_info))
+                    sys.stdout.flush()
+                    
+        except Exception as e:
+            print(json.dumps({"error": f"Notification error: {str(e)}"}))
+            sys.stdout.flush()
+
+    async def connect_device(self, device):
+        """Connect to a BLE device"""
+        try:
+            client = BleakClient(device.address)
+            await client.connect()
+            
+            # Store client reference
+            self.clients[device.address] = client
+            device_timeouts[device.address] = time.time()
+            
+            # Start notifications
+            await client.start_notify(CHARACTERISTIC_UUID, self.notification_handler)
+            
+            # Send pairing request
+            pairing_data = {
+                "action": "pair",
+                "client_uuid": self.client_uuid
+            }
+            await client.write_gatt_char(CHARACTERISTIC_UUID, json.dumps(pairing_data).encode())
+            
+            print(json.dumps({
+                "event": "device_connected",
+                "address": device.address,
+                "name": device.name or f'ESP32-{device.address[-5:]}'
+            }))
+            sys.stdout.flush()
+            
+            # Wait a bit for pairing response
+            await asyncio.sleep(0.5)
+            
+            # Send connect request
+            connect_data = {
+                "action": "connect",
+                "client_uuid": self.client_uuid
+            }
+            await client.write_gatt_char(CHARACTERISTIC_UUID, json.dumps(connect_data).encode())
+            
+            return client
+            
+        except Exception as e:
+            print(json.dumps({
+                "error": f"Connection failed for {device.address}: {str(e)}"
+            }))
+            sys.stdout.flush()
+            return None
+
+    async def check_timeouts(self):
+        """Check for device timeouts and cleanup"""
+        current_time = time.time()
+        disconnected_devices = []
+        
+        for address, last_seen in list(device_timeouts.items()):
+            if current_time - last_seen > 15:  # 15 second timeout
+                disconnected_devices.append(address)
+                
+        for address in disconnected_devices:
+            try:
+                if address in self.clients:
+                    await self.clients[address].disconnect()
+                    del self.clients[address]
+                del device_timeouts[address]
+                
+                print(json.dumps({
+                    "event": "device_disconnected", 
+                    "address": address
+                }))
+                sys.stdout.flush()
+                
+            except Exception as e:
+                print(json.dumps({"error": f"Cleanup error: {str(e)}"}))
+                sys.stdout.flush()
+
+    async def scan_and_manage(self):
+        """Main scanning and device management loop"""
+        while True:
+            try:
+                # Scan for devices
+                print(json.dumps({"debug": "Starting BLE scan..."}))
+                sys.stdout.flush()
+                
+                devices = await BleakScanner.discover(timeout=5.0)
+                print(json.dumps({"debug": f"Found {len(devices)} devices"}))
+                sys.stdout.flush()
+                
+                for device in devices:
+                    # Debug: Print all discovered devices
+                    print(json.dumps({
+                        "debug": f"Device found: {device.name} ({device.address})"
+                    }))
+                    sys.stdout.flush()
+                    
+                    # Look for our ESP32 devices - be more specific
+                    if device.name and ("ESP32_Streamdeck" in device.name or "ESP32" in device.name):
+                        print(json.dumps({
+                            "debug": f"ESP32 device detected: {device.name} ({device.address})"
+                        }))
+                        sys.stdout.flush()
+                        
+                        # Try to connect if not already connected
+                        if device.address not in self.clients:
+                            await self.connect_device(device)
+                
+                # Check for timeouts
+                await self.check_timeouts()
+                
+                # Short delay before next scan
+                await asyncio.sleep(2)
+                
+            except Exception as e:
+                print(json.dumps({"error": f"Scan error: {str(e)}"}))
+                sys.stdout.flush()
+                await asyncio.sleep(5)
+
+async def main():
+    device_manager = DeviceManager()
+    
+    # Handle graceful shutdown
+    def signal_handler(signum, frame):
+        print(json.dumps({"event": "shutdown"}))
+        sys.stdout.flush()
+        sys.exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    # Start the main loop
+    await device_manager.scan_and_manage()
+
+if __name__ == "__main__":
+    asyncio.run(main())

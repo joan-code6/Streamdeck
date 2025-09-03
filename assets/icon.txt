@@ -1,0 +1,2 @@
+// Simple icon placeholder - you can replace this with an actual icon file
+// For now, the app will use Electron's default icon

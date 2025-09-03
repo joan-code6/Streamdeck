@@ -1,0 +1,3 @@
+@echo off
+echo Starting ESP32 Streamdeck Monitor...
+npm start

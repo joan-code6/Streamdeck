@@ -1,18 +1,23 @@
 {
-  "name": "streamdeck-ui",
+  "name": "streamdeck-project",
   "version": "1.0.0",
-  "description": "Streamdeck ESP32 GPIO Monitor",
-  "main": "main.js",
+  "description": "ESP32 Streamdeck Monitor - Complete Project",
+  "private": true,
+  "workspaces": [
+    "app"
+  ],
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev"
+    "start": "cd app && npm start",
+    "dev": "cd app && npm run electron:dev",
+    "build": "cd app && npm run build",
+    "install-deps": "npm install && cd app && npm install && cd ../backend && pip install -r requirements.txt",
+    "setup": "npm run install-deps",
+    "backend": "cd backend && python bluetooth_scanner.py"
   },
-  "author": "Streamdeck",
+  "keywords": ["streamdeck", "esp32", "bluetooth", "electron", "gpio"],
+  "author": "Streamdeck Project",
   "license": "MIT",
-  "dependencies": {
-    "electron": "^25.0.0"
-  },
   "devDependencies": {
-    "electron-reload": "^2.0.0-alpha.1"
+    "concurrently": "^8.2.2"
   }
 }

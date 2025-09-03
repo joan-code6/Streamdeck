@@ -14,6 +14,14 @@ __pycache__/
 env/
 venv/
 
+# Build outputs
+app/dist/
+app/dist-electron/
+app/release/
+*.exe
+*.dmg
+*.AppImage
+
 # macOS
 .DS_Store
 

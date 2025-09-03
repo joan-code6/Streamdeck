@@ -1,2 +1,0 @@
-bleak>=0.20.0
-asyncio-dgram>=2.1.2

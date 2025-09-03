@@ -1,33 +1,86 @@
 # ESP32 Streamdeck Monitor
 
-A beautiful Electron-based desktop application for monitoring GPIO states from ESP32 devices via Bluetooth Low Energy (BLE).
+A modern Electron-based desktop application for monitoring GPIO states from ESP32 devices via Bluetooth Low Energy (BLE).
 
-## Features
+## 📁 Project Structure
 
-- **Real-time GPIO Monitoring**: Monitor up to 24 GPIO pins per device
-- **Multi-device Support**: Connect to multiple ESP32 devices simultaneously
-- **Beautiful UI**: Modern, responsive interface with dark theme
-- **Connection Management**: Automatic device discovery and connection verification
-- **Activity Logging**: Real-time logs of all device communications
-- **Analog & Digital Support**: Handles both digital and analog GPIO readings
+```
+streamdeck-project/
+├── README.md              # This file
+├── package.json           # Root workspace configuration
+├── run.bat               # Quick start script for Windows
+├── app/                  # Electron application (React + TypeScript + Vite)
+│   ├── package.json
+│   ├── electron/         # Electron main process
+│   ├── src/             # React frontend source
+│   └── dist/            # Built application
+├── backend/             # Python BLE backend
+│   ├── requirements.txt
+│   ├── bluetooth_scanner.py
+│   ├── volume_control.py
+│   └── volume_config.json
+├── firmware/            # ESP32 Arduino firmware
+│   └── streamdeck.ino
+└── assets/             # Shared project assets
+```
 
-## Setup
+## 🚀 Quick Start
 
 ### Prerequisites
 
-1. **Python 3.11+** with the following packages:
-   ```bash
-   pip install bleak
+1. **Node.js 16+** and npm
+2. **Python 3.11+**
+3. **Arduino IDE** with ESP32 support and ArduinoJson library
+
+### Installation & Setup
+
+1. **Install all dependencies:**
+   ```powershell
+   # PowerShell (recommended for Windows)
+   .\setup.ps1
+   
+   # Or using batch file
+   .\setup.bat
+   
+   # Or manually
+   npm run setup
    ```
 
-2. **Arduino IDE** with ESP32 support and the following libraries:
-   - ArduinoJson (install via Library Manager)
+2. **Flash ESP32 firmware:**
+   - Open `firmware/streamdeck.ino` in Arduino IDE
+   - Select your ESP32 board and upload
 
-3. **Node.js 16+** and npm
+3. **Start the application:**
+   ```powershell
+   # Quick start (runs both backend and frontend)
+   .\run.ps1     # PowerShell version
+   .\run.bat     # Batch version
+   npm start     # NPM script
+   
+   # Or run manually:
+   npm run backend  # Start Python BLE backend
+   npm run dev      # Start Electron app in dev mode
+   ```
 
-### Installation
+## 🛠️ Development
 
-1. Clone or download this repository
+### Frontend (Electron App)
+```bash
+cd app
+npm run dev          # Development with hot reload
+npm run build        # Build for production
+npm run electron:dev # Run electron in development
+```
+
+### Backend (Python)
+```bash
+cd backend
+python bluetooth_scanner.py  # Start BLE scanner
+```
+
+### Firmware
+- Located in `firmware/streamdeck.ino`
+- Use Arduino IDE to modify and upload to ESP32
 2. Install dependencies:
    ```bash
    npm install

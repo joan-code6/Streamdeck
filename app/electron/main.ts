@@ -73,8 +73,8 @@ ipcMain.handle('start-bluetooth-scanning', async () => {
 
   return new Promise((resolve, reject) => {
     try {
-      const scriptPath = path.join(__dirname, '../scripts/bluetooth_scanner.py');
-      const workingDir = path.join(__dirname, '..');
+      const scriptPath = path.join(__dirname, '../../backend/bluetooth_scanner.py');
+      const workingDir = path.join(__dirname, '../../backend');
       
       console.log('Starting Python scanner...');
       console.log('Script path:', scriptPath);
@@ -138,11 +138,11 @@ ipcMain.handle('stop-bluetooth-scanning', async () => {
 ipcMain.handle('save-device-config', async (_event, deviceId: string, config: any) => {
   return new Promise((resolve, reject) => {
     const python = spawn('python', [
-      path.join(__dirname, '../scripts/save_config.py'), 
+      path.join(__dirname, '../../backend/save_config.py'), 
       deviceId, 
       JSON.stringify(config)
     ], {
-      cwd: path.join(__dirname, '..')
+      cwd: path.join(__dirname, '../../backend')
     });
     
     let result = '';
@@ -173,10 +173,10 @@ ipcMain.handle('save-device-config', async (_event, deviceId: string, config: an
 ipcMain.handle('load-device-config', async (_event, deviceId: string) => {
   return new Promise((resolve, reject) => {
     const python = spawn('python', [
-      path.join(__dirname, '../scripts/load_config.py'), 
+      path.join(__dirname, '../../backend/load_config.py'), 
       deviceId
     ], {
-      cwd: path.join(__dirname, '..')
+      cwd: path.join(__dirname, '../../backend')
     });
     
     let result = '';

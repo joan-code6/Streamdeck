@@ -34,33 +34,26 @@ streamdeck-project/
 
 ### Installation & Setup
 
-1. **Install all dependencies:**
+1. **Clone the repository:**
    ```powershell
-   # PowerShell (recommended for Windows)
+   git clone https://github.com/joan-code6/Streamdeck/
+   ```
+
+2. **Run the setup script:**
+   ```powershell
    .\setup.ps1
-   
-   # Or using batch file
-   .\setup.bat
-   
-   # Or manually
-   npm run setup
    ```
 
-2. **Flash ESP32 firmware:**
-   - Open `firmware/streamdeck.ino` in Arduino IDE
-   - Select your ESP32 board and upload
-
-3. **Start the application:**
+3. **Navigate to the project root (if not already there):**
    ```powershell
-   # Quick start (runs both backend and frontend)
-   .\run.ps1     # PowerShell version
-   .\run.bat     # Batch version
-   npm start     # NPM script
-   
-   # Or run manually:
-   npm run backend  # Start Python BLE backend
-   npm run dev      # Start Electron app in dev mode
+   cd ..
    ```
+
+4. **Start the development environment:**
+   ```powershell
+   npm run dev
+   ```
+
 
 ## 🛠️ Development
 

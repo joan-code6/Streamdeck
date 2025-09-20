@@ -10,6 +10,20 @@ let mainWindow: BrowserWindow;
 
 const isDev = process.env.NODE_ENV === 'development';
 
+function checkPythonInstallation(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const pythonProcess = spawn('python', ['--version'], { stdio: 'pipe' });
+    
+    pythonProcess.on('close', (code) => {
+      resolve(code === 0);
+    });
+    
+    pythonProcess.on('error', () => {
+      resolve(false);
+    });
+  });
+}
+
 function createWindow(): void {
   // Create the browser window
   mainWindow = new BrowserWindow({
@@ -47,7 +61,20 @@ function createWindow(): void {
 }
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Check for Python installation
+  const pythonAvailable = await checkPythonInstallation();
+  
+  if (!pythonAvailable) {
+    const { dialog } = require('electron');
+    dialog.showErrorBox(
+      'Python Required',
+      'This application requires Python to be installed.\n\nPlease install Python 3.8 or higher from https://python.org and restart the application.\n\nMake sure Python is added to your PATH environment variable.'
+    );
+    app.quit();
+    return;
+  }
+
   // Hide the menu bar completely
   Menu.setApplicationMenu(null);
   createWindow();

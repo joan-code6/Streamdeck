@@ -22,9 +22,11 @@ function createWindow(): void {
       contextIsolation: true,
       preload: path.join(__dirname, '../electron/preload.js'),
     },
-    titleBarStyle: 'hiddenInset',
     frame: false, // Remove window frame completely
+    titleBarStyle: 'hidden', // Hide title bar on macOS
     show: false,
+    resizable: true,
+    backgroundColor: '#1f2937', // Match the app's gray-800 color
   });
 
   // Load the app
@@ -202,4 +204,89 @@ ipcMain.handle('load-device-config', async (_event, deviceId: string) => {
       }
     });
   });
+});
+
+// Hotkey execution
+ipcMain.handle('execute-hotkey', async (_event, hotkeyString: string, holdDuration?: number) => {
+  console.log('Executing hotkey:', hotkeyString, 'with duration:', holdDuration);
+  
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(__dirname, '../../backend/hotkey_executor.py');
+    console.log('Script path:', scriptPath);
+    
+    const args = [scriptPath, hotkeyString];
+    
+    if (holdDuration !== undefined) {
+      args.push(holdDuration.toString());
+    }
+    
+    console.log('Python args:', args);
+    
+    const python = spawn('python', args, {
+      cwd: path.join(__dirname, '../../backend')
+    });
+    
+    let result = '';
+    let error = '';
+
+    python.stdout.on('data', (data) => {
+      result += data.toString();
+      console.log('Python stdout:', data.toString());
+    });
+
+    python.stderr.on('data', (data) => {
+      error += data.toString();
+      console.log('Python stderr:', data.toString());
+    });
+
+    python.on('close', (code) => {
+      console.log('Python process exited with code:', code);
+      
+      if (code === 0) {
+        try {
+          const parsed = JSON.parse(result);
+          console.log('Parsed result:', parsed);
+          resolve(parsed);
+        } catch (parseError) {
+          console.log('JSON parse error, raw result:', result);
+          resolve({ success: true, raw: result });
+        }
+      } else {
+        console.log('Python error:', error);
+        reject(new Error(error || 'Unknown error'));
+      }
+    });
+
+    python.on('error', (err) => {
+      console.log('Python spawn error:', err);
+      reject(err);
+    });
+  });
+});
+
+// Window control handlers
+ipcMain.handle('minimize-window', () => {
+  if (mainWindow) {
+    mainWindow.minimize();
+  }
+});
+
+ipcMain.handle('toggle-maximize-window', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+ipcMain.handle('close-window', () => {
+  if (mainWindow) {
+    mainWindow.close();
+  }
+});
+
+ipcMain.handle('is-window-maximized', () => {
+  return mainWindow ? mainWindow.isMaximized() : false;
 });

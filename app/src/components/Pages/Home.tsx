@@ -6,7 +6,7 @@ export const Home: React.FC = () => {
   const { connectedDevices, currentDevice, isScanning, loadDeviceConfig, selectDevice } = useDevice();
   const [currentConfig, setCurrentConfig] = useState<any>(null);
 
-  const connectedDeviceList = Object.values(connectedDevices);
+  const connectedDeviceList = Object.values(connectedDevices).filter(device => device.added);
   const currentDeviceData = currentDevice ? connectedDevices[currentDevice] : null;
 
   useEffect(() => {

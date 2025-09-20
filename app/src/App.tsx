@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DeviceProvider } from './contexts/DeviceContext';
+import { TitleBar } from './components/Layout/TitleBar';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Home } from './components/Pages/Home';
 import { AddDevice } from './components/Pages/AddDevice';
@@ -23,11 +24,14 @@ function App() {
 
   return (
     <DeviceProvider>
-      <div className="flex h-screen bg-gray-50 overflow-hidden">
-        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-        <main className="flex-1 overflow-y-auto">
-          {renderContent()}
-        </main>
+      <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
+        <TitleBar />
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+          <main className="flex-1 overflow-y-auto">
+            {renderContent()}
+          </main>
+        </div>
       </div>
     </DeviceProvider>
   );

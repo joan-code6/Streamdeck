@@ -7,6 +7,7 @@ interface ConnectedDevice {
   gpioStates: number[];
   lastSeen: number;
   connected: boolean;
+  added: boolean;
 }
 
 interface DeviceContextType {
@@ -17,6 +18,7 @@ interface DeviceContextType {
   startScanning: () => Promise<void>;
   stopScanning: () => Promise<void>;
   selectDevice: (address: string) => void;
+  addDevice: (address: string) => void;
   updateDeviceConfig: (address: string, config: Partial<DeviceConfig>) => Promise<void>;
   loadDeviceConfig: (address: string) => Promise<DeviceConfig>;
 }
@@ -36,6 +38,11 @@ export const DeviceProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, DeviceConfig>>({});
   const [currentDevice, setCurrentDevice] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+
+  // Helper function to convert device address to config ID format
+  const getDeviceConfigId = (address: string): string => {
+    return address.replace(/:/g, '-').toLowerCase();
+  };
 
   useEffect(() => {
     if (!window.electronAPI) return;
@@ -71,14 +78,10 @@ export const DeviceProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             name: data.name || `ESP32-${data.address.slice(-5)}`,
             gpioStates: data.gpio_states,
             lastSeen: Date.now(),
-            connected: true
+            connected: true,
+            added: prev[data.address]?.added || false // Preserve added status or default to false
           }
         }));
-
-        // Auto-select first device if none selected
-        if (!currentDevice) {
-          setCurrentDevice(data.address);
-        }
       }
     };
 
@@ -131,22 +134,50 @@ export const DeviceProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const selectDevice = (address: string) => {
     setCurrentDevice(address);
+    // Auto-load config when selecting device
+    if (!deviceConfigs[address]) {
+      loadDeviceConfig(address).catch(console.error);
+    }
   };
+
+  const addDevice = (address: string) => {
+    setConnectedDevices(prev => ({
+      ...prev,
+      [address]: {
+        ...prev[address],
+        added: true
+      }
+    }));
+  };
+
+  // Auto-load config when currentDevice changes
+  useEffect(() => {
+    if (currentDevice && !deviceConfigs[currentDevice]) {
+      loadDeviceConfig(currentDevice).catch(console.error);
+    }
+  }, [currentDevice]);
 
   const loadDeviceConfig = async (address: string): Promise<DeviceConfig> => {
     if (!window.electronAPI) {
       throw new Error('Electron API not available');
     }
 
+    const configId = getDeviceConfigId(address);
     try {
-      const config = await window.electronAPI.loadDeviceConfig(address);
-      setDeviceConfigs(prev => ({
-        ...prev,
-        [address]: config
-      }));
+      console.log('DeviceContext: Loading config from disk for device:', address, 'configId:', configId);
+      const config = await window.electronAPI.loadDeviceConfig(configId);
+      console.log('DeviceContext: Loaded config from disk for device:', address, config);
+      setDeviceConfigs(prev => {
+        const newConfigs = {
+          ...prev,
+          [address]: config
+        };
+        console.log('DeviceContext: Updated deviceConfigs state:', newConfigs);
+        return newConfigs;
+      });
       return config;
     } catch (error) {
-      console.error('Error loading device config:', error);
+      console.error('DeviceContext: Error loading device config:', error);
       throw error;
     }
   };
@@ -154,23 +185,30 @@ export const DeviceProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const updateDeviceConfig = async (address: string, configUpdate: Partial<DeviceConfig>) => {
     if (!window.electronAPI) return;
 
+    const configId = getDeviceConfigId(address);
     const currentConfig = deviceConfigs[address] || {
-      id: address,
+      id: configId,
       name: `ESP32-${address.slice(-5)}`,
       gpios: {},
       volumeGpio: 'd15'
     };
 
     const updatedConfig = { ...currentConfig, ...configUpdate };
+    console.log('DeviceContext: Saving config for device:', address, 'configId:', configId, updatedConfig);
 
     try {
-      await window.electronAPI.saveDeviceConfig(address, updatedConfig);
-      setDeviceConfigs(prev => ({
-        ...prev,
-        [address]: updatedConfig
-      }));
+      await window.electronAPI.saveDeviceConfig(configId, updatedConfig);
+      console.log('DeviceContext: Config saved to disk successfully');
+      setDeviceConfigs(prev => {
+        const newConfigs = {
+          ...prev,
+          [address]: updatedConfig
+        };
+        console.log('DeviceContext: Updated deviceConfigs state after save:', newConfigs);
+        return newConfigs;
+      });
     } catch (error) {
-      console.error('Error saving device config:', error);
+      console.error('DeviceContext: Error saving device config:', error);
     }
   };
 
@@ -191,6 +229,7 @@ export const DeviceProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       startScanning,
       stopScanning,
       selectDevice,
+      addDevice,
       updateDeviceConfig,
       loadDeviceConfig
     }}>

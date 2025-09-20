@@ -7,6 +7,7 @@ import signal
 import logging
 import uuid
 import os
+import subprocess
 
 # Configure logging
 logging.basicConfig(level=logging.WARNING)
@@ -14,7 +15,15 @@ logging.basicConfig(level=logging.WARNING)
 # Global variables for device management
 connected_devices = {}
 device_timeouts = {}
+device_gpio_states = {}  # Track previous GPIO states for button press detection
 client_uuid = str(uuid.uuid4())  # Generate unique client UUID
+
+# GPIO pin mapping (adjust based on your ESP32 setup)
+GPIO_PIN_MAP = {
+    0: "d2", 1: "d4", 2: "d5", 3: "d12", 4: "d13", 5: "d14",
+    6: "d15", 7: "d16", 8: "d17", 9: "d18", 10: "d19", 
+    11: "d21", 12: "d25", 13: "d26", 14: "d27", 15: "d33"
+}
 
 # Service and characteristic UUIDs (must match ESP32)
 SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
@@ -55,11 +64,28 @@ class DeviceManager:
                 
                 # Process GPIO data
                 if 'gpio_states' in data_obj:
+                    current_gpio_states = data_obj.get('gpio_states', [])
+                    
+                    # Check for button presses (0 -> 1 transitions)
+                    if device_address in device_gpio_states:
+                        previous_states = device_gpio_states[device_address]
+                        
+                        # Compare current and previous states to detect button presses
+                        for i, (current, previous) in enumerate(zip(current_gpio_states, previous_states)):
+                            if current == 1 and previous == 0:  # Button press detected
+                                gpio_pin = GPIO_PIN_MAP.get(i)
+                                if gpio_pin:
+                                    # Execute action for this GPIO pin
+                                    asyncio.create_task(self.execute_gpio_action(device_address, gpio_pin))
+                    
+                    # Update stored GPIO states
+                    device_gpio_states[device_address] = current_gpio_states.copy()
+                    
                     # Create device info in expected format
                     device_info = {
                         "address": device_address,
                         "name": f"ESP32-{device_address[-5:]}",
-                        "gpio_states": data_obj.get('gpio_states', []),
+                        "gpio_states": current_gpio_states,
                         "timestamp": time.time(),
                         "connected": True
                     }
@@ -70,6 +96,63 @@ class DeviceManager:
                     
         except Exception as e:
             print(json.dumps({"error": f"Notification error: {str(e)}"}))
+            sys.stdout.flush()
+
+    async def execute_gpio_action(self, device_address, gpio_pin):
+        """Execute action for GPIO button press"""
+        try:
+            # Convert device address to device ID (replace colons with dashes)
+            device_id = device_address.replace(':', '-').lower()
+            
+            # Execute GPIO action handler
+            script_path = os.path.join(os.path.dirname(__file__), 'gpio_action_handler.py')
+            
+            # Run the GPIO action handler in a subprocess
+            process = subprocess.Popen(
+                ['python', script_path, device_id, gpio_pin],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=os.path.dirname(__file__)
+            )
+            
+            stdout, stderr = process.communicate(timeout=5)  # 5 second timeout
+            
+            if process.returncode == 0:
+                try:
+                    result = json.loads(stdout)
+                    print(json.dumps({
+                        "debug": f"GPIO {gpio_pin} action executed",
+                        "device": device_id,
+                        "result": result
+                    }))
+                except json.JSONDecodeError:
+                    print(json.dumps({
+                        "debug": f"GPIO {gpio_pin} action executed (non-JSON response)",
+                        "device": device_id,
+                        "output": stdout
+                    }))
+            else:
+                print(json.dumps({
+                    "error": f"GPIO action failed for {gpio_pin}",
+                    "device": device_id,
+                    "stderr": stderr
+                }))
+            
+            sys.stdout.flush()
+            
+        except subprocess.TimeoutExpired:
+            print(json.dumps({
+                "error": f"GPIO action timeout for {gpio_pin}",
+                "device": device_address
+            }))
+            sys.stdout.flush()
+        except Exception as e:
+            print(json.dumps({
+                "error": f"GPIO action error: {str(e)}",
+                "device": device_address,
+                "gpio": gpio_pin
+            }))
             sys.stdout.flush()
 
     async def connect_device(self, device):

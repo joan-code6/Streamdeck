@@ -5,6 +5,11 @@ export interface ElectronAPI {
   removeDeviceUpdateListener: (callback: (data: DeviceUpdate) => void) => void;
   saveDeviceConfig: (deviceId: string, config: DeviceConfig) => Promise<{ success: boolean }>;
   loadDeviceConfig: (deviceId: string) => Promise<DeviceConfig>;
+  executeHotkey: (hotkeyString: string, holdDuration?: number) => Promise<{ success: boolean; error?: string }>;
+  minimizeWindow: () => Promise<void>;
+  toggleMaximizeWindow: () => Promise<void>;
+  closeWindow: () => Promise<void>;
+  isWindowMaximized: () => Promise<boolean>;
 }
 
 declare global {
@@ -31,9 +36,10 @@ export interface DeviceUpdate {
 }
 
 export interface GPIOAction {
-  type: 'key' | 'multimedia' | 'system' | 'custom';
+  type: 'key' | 'multimedia' | 'system' | 'custom' | 'hotkey';
   action: string;
   params?: Record<string, any>;
+  holdDuration?: number; // For hotkey actions
 }
 
 export interface DeviceConfig {

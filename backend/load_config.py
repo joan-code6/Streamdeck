@@ -15,22 +15,22 @@ def load_device_config(device_id):
         "id": device_id,
         "name": f"ESP32 Stream Deck {device_id[-6:]}",
         "gpios": {
-            "d2": {"type": "button", "label": "Button 1", "action": ""},
-            "d4": {"type": "button", "label": "Button 2", "action": ""},
-            "d5": {"type": "button", "label": "Button 3", "action": ""},
-            "d12": {"type": "button", "label": "Button 4", "action": ""},
-            "d13": {"type": "button", "label": "Button 5", "action": ""},
-            "d14": {"type": "button", "label": "Button 6", "action": ""},
-            "d15": {"type": "rotary", "label": "Volume", "action": "volume"},
-            "d16": {"type": "button", "label": "Button 7", "action": ""},
-            "d17": {"type": "button", "label": "Button 8", "action": ""},
-            "d18": {"type": "button", "label": "Button 9", "action": ""},
-            "d19": {"type": "button", "label": "Button 10", "action": ""},
-            "d21": {"type": "button", "label": "Button 11", "action": ""},
-            "d25": {"type": "button", "label": "Button 12", "action": ""},
-            "d26": {"type": "button", "label": "Button 13", "action": ""},
-            "d27": {"type": "button", "label": "Button 14", "action": ""},
-            "d33": {"type": "button", "label": "Button 15", "action": ""}
+            "d2": {"type": "key", "action": ""},
+            "d4": {"type": "key", "action": ""},
+            "d5": {"type": "key", "action": ""},
+            "d12": {"type": "key", "action": ""},
+            "d13": {"type": "key", "action": ""},
+            "d14": {"type": "key", "action": ""},
+            "d15": {"type": "custom", "action": "volume"},
+            "d16": {"type": "key", "action": ""},
+            "d17": {"type": "key", "action": ""},
+            "d18": {"type": "key", "action": ""},
+            "d19": {"type": "key", "action": ""},
+            "d21": {"type": "key", "action": ""},
+            "d25": {"type": "key", "action": ""},
+            "d26": {"type": "key", "action": ""},
+            "d27": {"type": "key", "action": ""},
+            "d33": {"type": "key", "action": ""}
         },
         "volumeGpio": "d15"
     }
@@ -44,6 +44,14 @@ def load_device_config(device_id):
                 for key in default_config:
                     if key not in config:
                         config[key] = default_config[key]
+                
+                # Fix invalid action types in existing configs
+                for gpio, gpio_config in config.get('gpios', {}).items():
+                    if gpio_config.get('type') == 'button':
+                        gpio_config['type'] = 'key'
+                    if gpio_config.get('type') == 'rotary':
+                        gpio_config['type'] = 'custom'
+                
                 return config
         else:
             # Create default config file

@@ -1,0 +1,11 @@
+{
+  "id": "00:4B:12:3B:31:82",
+  "name": "ESP32-31:82",
+  "gpios": {
+    "d4": {
+      "type": "key",
+      "action": "alt+tab"
+    }
+  },
+  "volumeGpio": "d15"
+}

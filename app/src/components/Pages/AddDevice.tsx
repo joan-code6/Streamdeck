@@ -3,7 +3,7 @@ import { useDevice } from '../../contexts/DeviceContext';
 import { Bluetooth, Search, Plus, Wifi, AlertCircle } from 'lucide-react';
 
 export const AddDevice: React.FC = () => {
-  const { connectedDevices, isScanning, startScanning, stopScanning, updateDeviceConfig } = useDevice();
+  const { connectedDevices, isScanning, startScanning, stopScanning, updateDeviceConfig, addDevice } = useDevice();
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [deviceName, setDeviceName] = useState('');
   const [showNameInput, setShowNameInput] = useState(false);
@@ -42,6 +42,7 @@ export const AddDevice: React.FC = () => {
         name: deviceName.trim(),
         id: selectedDevice 
       });
+      addDevice(selectedDevice);
       setSelectedDevice(null);
       setDeviceName('');
       setShowNameInput(false);

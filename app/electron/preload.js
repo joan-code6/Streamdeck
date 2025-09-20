@@ -21,6 +21,16 @@ const api = {
   
   loadDeviceConfig: (deviceId) => 
     ipcRenderer.invoke('load-device-config', deviceId),
+  
+  // Hotkey execution
+  executeHotkey: (hotkeyString, holdDuration) =>
+    ipcRenderer.invoke('execute-hotkey', hotkeyString, holdDuration),
+  
+  // Window controls
+  minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
+  toggleMaximizeWindow: () => ipcRenderer.invoke('toggle-maximize-window'),
+  closeWindow: () => ipcRenderer.invoke('close-window'),
+  isWindowMaximized: () => ipcRenderer.invoke('is-window-maximized'),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

@@ -4,7 +4,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
+const projectRoot = path.resolve(__dirname, '../../');
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow;
 
@@ -27,6 +27,7 @@ function createWindow(): void {
     show: false,
     resizable: true,
     backgroundColor: '#1f2937', // Match the app's gray-800 color
+    icon: path.join(projectRoot, 'assets/icon.ico'), // Set the Electron app icon
   });
 
   // Load the app

@@ -1,0 +1,6 @@
+# ESP32 Streamdeck Backend Dependencies
+bleak>=0.20.0
+asyncio-dgram>=2.1.2
+pycaw>=20220416  # For Windows volume control
+comtypes>=1.1.10  # Required by pycaw
+pynput>=1.7.6  # For hotkey execution

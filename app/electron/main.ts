@@ -10,17 +10,45 @@ let mainWindow: BrowserWindow;
 
 const isDev = process.env.NODE_ENV === 'development';
 
+function getBackendPath(): { scriptPath: (script: string) => string; workingDir: string } {
+  const isPackaged = app.isPackaged;
+  const basePath = isPackaged ? path.join(process.resourcesPath, 'backend') : path.join(__dirname, '../../backend');
+  
+  return {
+    scriptPath: (script: string) => path.join(basePath, script),
+    workingDir: basePath
+  };
+}
+
 function checkPythonInstallation(): Promise<boolean> {
   return new Promise((resolve) => {
-    const pythonProcess = spawn('python', ['--version'], { stdio: 'pipe' });
+    const pythonCommands = ['python', 'python3', 'py'];
     
-    pythonProcess.on('close', (code) => {
-      resolve(code === 0);
-    });
+    const tryCommand = (index: number) => {
+      if (index >= pythonCommands.length) {
+        resolve(false);
+        return;
+      }
+      
+      const command = pythonCommands[index];
+      const pythonProcess = spawn(command, ['--version'], { stdio: 'pipe' });
+      
+      pythonProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log(`Python found with command: ${command}`);
+          pythonCommand = command;
+          resolve(true);
+        } else {
+          tryCommand(index + 1);
+        }
+      });
+      
+      pythonProcess.on('error', () => {
+        tryCommand(index + 1);
+      });
+    };
     
-    pythonProcess.on('error', () => {
-      resolve(false);
-    });
+    tryCommand(0);
   });
 }
 
@@ -94,6 +122,7 @@ app.on('activate', () => {
 
 // IPC handlers for Python backend communication
 let bluetoothProcess: any = null;
+let pythonCommand: string = 'python';
 
 ipcMain.handle('start-bluetooth-scanning', async () => {
   if (bluetoothProcess) {
@@ -102,18 +131,36 @@ ipcMain.handle('start-bluetooth-scanning', async () => {
 
   return new Promise((resolve, reject) => {
     try {
-      const scriptPath = path.join(__dirname, '../../backend/bluetooth_scanner.py');
-      const workingDir = path.join(__dirname, '../../backend');
+      const backend = getBackendPath();
+      const scriptPath = backend.scriptPath('bluetooth_scanner.py');
+      const workingDir = backend.workingDir;
       
       console.log('Starting Python scanner...');
+      console.log('Is packaged:', app.isPackaged);
       console.log('Script path:', scriptPath);
       console.log('Working directory:', workingDir);
+      console.log('Python command:', pythonCommand);
       
-      bluetoothProcess = spawn('python', [scriptPath], {
+      // Check if script file exists
+      const fs = require('fs');
+      if (!fs.existsSync(scriptPath)) {
+        console.error('Script file does not exist:', scriptPath);
+        reject(new Error(`Script file not found: ${scriptPath}`));
+        return;
+      }
+      
+      bluetoothProcess = spawn(pythonCommand, [scriptPath], {
         cwd: workingDir
       });
 
+      let startupTimeout = setTimeout(() => {
+        console.error('Python process startup timeout');
+        bluetoothProcess.kill();
+        reject(new Error('Python process failed to start'));
+      }, 5000);
+
       bluetoothProcess.stdout.on('data', (data: Buffer) => {
+        clearTimeout(startupTimeout);
         const lines = data.toString().split('\n').filter(line => line.trim());
         console.log('Python output:', data.toString());
         
@@ -166,12 +213,13 @@ ipcMain.handle('stop-bluetooth-scanning', async () => {
 
 ipcMain.handle('save-device-config', async (_event, deviceId: string, config: any) => {
   return new Promise((resolve, reject) => {
+    const backend = getBackendPath();
     const python = spawn('python', [
-      path.join(__dirname, '../../backend/save_config.py'), 
+      backend.scriptPath('save_config.py'), 
       deviceId, 
       JSON.stringify(config)
     ], {
-      cwd: path.join(__dirname, '../../backend')
+      cwd: backend.workingDir
     });
     
     let result = '';
@@ -201,11 +249,12 @@ ipcMain.handle('save-device-config', async (_event, deviceId: string, config: an
 
 ipcMain.handle('load-device-config', async (_event, deviceId: string) => {
   return new Promise((resolve, reject) => {
+    const backend = getBackendPath();
     const python = spawn('python', [
-      path.join(__dirname, '../../backend/load_config.py'), 
+      backend.scriptPath('load_config.py'), 
       deviceId
     ], {
-      cwd: path.join(__dirname, '../../backend')
+      cwd: backend.workingDir
     });
     
     let result = '';
@@ -238,7 +287,8 @@ ipcMain.handle('execute-hotkey', async (_event, hotkeyString: string, holdDurati
   console.log('Executing hotkey:', hotkeyString, 'with duration:', holdDuration);
   
   return new Promise((resolve, reject) => {
-    const scriptPath = path.join(__dirname, '../../backend/hotkey_executor.py');
+    const backend = getBackendPath();
+    const scriptPath = backend.scriptPath('hotkey_executor.py');
     console.log('Script path:', scriptPath);
     
     const args = [scriptPath, hotkeyString];
@@ -250,7 +300,7 @@ ipcMain.handle('execute-hotkey', async (_event, hotkeyString: string, holdDurati
     console.log('Python args:', args);
     
     const python = spawn('python', args, {
-      cwd: path.join(__dirname, '../../backend')
+      cwd: backend.workingDir
     });
     
     let result = '';

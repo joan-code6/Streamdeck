@@ -1,0 +1,25 @@
+directories:
+  output: release-new
+  buildResources: build
+appId: com.streamdeck.diy
+productName: DIY Stream Deck
+files:
+  - filter:
+      - dist/**/*
+      - dist-electron/**/*
+extraResources:
+  - from: ../backend
+    to: backend
+    filter:
+      - '**/*'
+asar: false
+win:
+  target: nsis
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: DIY Stream Deck
+electronVersion: 28.3.3

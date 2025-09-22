@@ -41,16 +41,23 @@
     "wait-on": "^8.0.4"
   },
   "build": {
-    "appId": "de.joancode.streamdeck",
-    "productName": "DIY Stream Deck Controller",
+    "appId": "com.streamdeck.diy",
+    "productName": "DIY Stream Deck",
     "directories": {
-      "output": "release"
+      "output": "release-new"
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*",
-      "../backend/**/*"
+      "dist-electron/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": ["**/*"]
+      }
+    ],
+    "asar": false,
     "win": {
       "target": "nsis"
     },
@@ -60,7 +67,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "DIY Stream Deck Controller"
+      "shortcutName": "DIY Stream Deck"
     }
   }
 }

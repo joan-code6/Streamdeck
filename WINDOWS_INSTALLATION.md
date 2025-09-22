@@ -22,18 +22,18 @@ You should see something like `Python 3.11.0` (version may vary).
 
 ## Installation
 
-1. Download the `DIY Stream Deck Controller Setup 1.0.0.exe` installer
+1. Download the `DIY Stream Deck Setup 1.0.0.exe` installer
 2. Run the installer as administrator
 3. Follow the installation wizard
 4. The application will be installed and shortcuts will be created on your desktop and in the Start menu
 
 ## First Time Setup
 
-After installation, run the setup script to install Python dependencies:
+After installation, the Python backend files are automatically included with the application. You just need to ensure Python is installed:
 
-1. Open the installation directory (usually `C:\Users\<YourName>\AppData\Local\Programs\diy-stream-deck-controller\`)
-2. Run `setup_windows.bat` as administrator
-3. The script will install all required Python packages
+1. Install Python 3.8+ from https://python.org (if not already installed)
+2. Make sure Python is added to your PATH
+3. The app will check for Python automatically when it starts
 
 ## Running the Application
 
@@ -49,8 +49,9 @@ After installation, run the setup script to install Python dependencies:
 - Restart the application
 
 ### Backend Not Working
-- Run `setup_windows.bat` again to ensure all dependencies are installed
+- Ensure Python 3.8+ is installed and in PATH
 - Check that your antivirus isn't blocking Python execution
+- The backend files are automatically included with the installation
 
 ### Bluetooth Issues
 - Make sure your ESP32 devices are properly paired in Windows Bluetooth settings
@@ -58,9 +59,8 @@ After installation, run the setup script to install Python dependencies:
 
 ## Files Included
 
-- `DIY Stream Deck Controller.exe` - Main application
-- `setup_windows.bat` - Python dependency installer
-- `backend/` - Python scripts for Bluetooth communication and device control
+- `DIY Stream Deck.exe` - Main application
+- `backend/` - Python scripts for Bluetooth communication and device control (automatically included)
 - `resources/` - Application resources
 
 ## System Requirements
